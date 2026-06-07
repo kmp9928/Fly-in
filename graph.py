@@ -39,6 +39,12 @@ class Graph:
             for edge in self.connections
         }
 
+    def get_start(self) -> Node:
+        return self.start
+
+    def get_end(self) -> Node:
+        return self.end
+
 
 # if __name__ == "__main__":
 #     network = NetworkParser.load("01_linear_path.txt")

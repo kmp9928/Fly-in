@@ -15,16 +15,9 @@ class MinCostMaxFlowAlgorithm:
 
 class MinCostMaxFlowTask:
     flow_graph: FlowGraph
-    start: str
-    end: str
-    nodes: List[str]
 
     def __init__(self, graph: Graph) -> None:
-        flow_graph = FlowGraph(graph)
-        self.flow_graph = flow_graph
-        self.start = flow_graph.start
-        self.end = flow_graph.end
-        self.nodes = flow_graph.get_nodes()
+        self.flow_graph = FlowGraph(graph)
 
     def run(self) -> List[Path]:
         total_flow: int = 0
@@ -48,18 +41,19 @@ class MinCostMaxFlowTask:
         return MinCostMaxFlowTask.collapse_paths(self.decompose_paths())
 
     def bellman_ford(self) -> Tuple[Dict[str, Tuple[str, int]], int]:
+        nodes: List[str] = self.flow_graph.get_nodes()
         distances: Dict[str, int] = {
-            node: maxsize for node in self.nodes
+            node: maxsize for node in nodes
         }
         predecessors: Dict[str, Tuple[str, int]] = {
-            node: (None, 0) for node in self.nodes
+            node: (None, 0) for node in nodes
         }
-        distances[self.start] = 0
+        distances[self.flow_graph.get_start()] = 0
 
-        for _ in range(len(self.nodes) - 1):
+        for _ in range(len(nodes) - 1):
             updated = False
 
-            for node in self.nodes:
+            for node in nodes:
                 if distances[node] == maxsize:
                     continue
 
@@ -76,7 +70,7 @@ class MinCostMaxFlowTask:
             if not updated:
                 break
 
-        for node in self.nodes:
+        for node in nodes:
             if distances[node] == maxsize:
                 continue
 
@@ -87,23 +81,23 @@ class MinCostMaxFlowTask:
                 if distances[node] + edge.cost < distances[edge.to]:
                     raise FlowGraphError("Negative cycle detected.")
 
-        if predecessors[self.end][0] is None:
+        if predecessors[self.flow_graph.get_end()][0] is None:
             return None
 
-        return predecessors, distances[self.end]
+        return predecessors, distances[self.flow_graph.get_end()]
 
     def augment(self, predecessors: Dict[str, Tuple[str, int]]) -> int:
         amount: int = maxsize
-        node: str = self.end
+        node: str = self.flow_graph.get_end()
 
-        while node != self.start:
+        while node != self.flow_graph.get_start():
             previous, i = predecessors[node]
             edge = self.flow_graph.get_edges(previous)[i]
             amount = min(amount, edge.capacity)
             node = previous
 
-        node = self.end
-        while node != self.start:
+        node = self.flow_graph.get_end()
+        while node != self.flow_graph.get_start():
             previous, i = predecessors[node]
             edge = self.flow_graph.get_edges(previous)[i]
             reverse = self.flow_graph.get_edges(edge.to)[edge.reverse]
@@ -117,7 +111,7 @@ class MinCostMaxFlowTask:
         paths: List[Path] = []
         remaining_flow: Dict[Tuple[str, int], int] = {}
 
-        for node in self.nodes:
+        for node in self.flow_graph.get_nodes():
             for i, edge in enumerate(self.flow_graph.get_edges(node)):
                 if edge.original:
                     reverse_edges = self.flow_graph.get_edges(edge.to)
@@ -126,11 +120,11 @@ class MinCostMaxFlowTask:
                         remaining_flow[(node, i)] = used
 
         while True:
-            path = [self.start]
-            node = self.start
+            path = [self.flow_graph.get_start()]
+            node = self.flow_graph.get_start()
             visited = set()
 
-            while node != self.end:
+            while node != self.flow_graph.get_end():
                 if node in visited:
                     raise FlowGraphError("Cycle while decomposing.")
 
@@ -143,7 +137,7 @@ class MinCostMaxFlowTask:
                         break
 
                 if next_item is None:
-                    if node == self.start:
+                    if node == self.flow_graph.get_start():
                         return paths
                     raise FlowGraphError(
                         "Broken flow path stopped before goal."

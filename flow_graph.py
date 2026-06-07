@@ -25,27 +25,23 @@ class Edge:
 class FlowGraph:
     start: str
     end: str
-    nodes: Dict[str, Node]
-    connections: Dict[Tuple[str, str], int]
     flow_graph: Dict[str, List[Edge]]
     forbidden: List[str]
 
     def __init__(self, graph: Graph) -> None:
-        self.start = FlowGraph.make_out_name(graph.start.name)
-        self.end = FlowGraph.make_in_name(graph.end.name)
-        self.nodes = graph.get_all_nodes()
-        self.connections = graph.get_all_edges()
+        self.start = FlowGraph.make_out_name(graph.get_start().name)
+        self.end = FlowGraph.make_in_name(graph.get_end().name)
         self.flow_graph = {}
         self.forbidden = [
             FlowGraph.make_in_name(graph.start.name),
             FlowGraph.make_out_name(graph.end.name)
         ]
 
-        for connection, capacity in self.connections.items():
+        for connection, capacity in graph.get_all_edges().items():
             self.add_edge_pair(connection, capacity)
             self.add_residual_pair(connection)
 
-        for node in self.nodes.values():
+        for node in graph.get_all_nodes().values():
             if node.zone.value != "blocked":
                 self.add_inner_pair(node)
 
@@ -146,6 +142,12 @@ class FlowGraph:
 
     def get_edges(self, node: str) -> List[Edge]:
         return self.flow_graph[node]
+
+    def get_start(self) -> str:
+        return self.start
+
+    def get_end(self) -> str:
+        return self.end
 
 
 # if __name__ == "__main__":
