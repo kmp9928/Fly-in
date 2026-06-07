@@ -1,33 +1,22 @@
 import plotly.graph_objects as go
-from typing import List, Dict
-from input_parser import Zone, NetworkParser
+from typing import Dict
 from graph import Graph
 
 
 class Renderer:
     @staticmethod
     def render_network(graph: Graph) -> None:
-    #     graph: Dict[str, List[str]], nodes: Dict[str, Zone]
-    # ) -> None:
         edge_x = []
         edge_y = []
 
-        for node in graph.get_nodes().values():
-        # for node, neighbors in graph.items():
+        for node in graph.get_all_nodes().values():
             x0 = node.x
-            y0 = node.y     
-            # x0 = nodes[node].x
-            # y0 = nodes[node].y
-            for edge in graph.get_edges(node.name):
+            y0 = node.y
+            for edge in graph.get_node_edges(node.name):
                 x1 = edge.x
                 y1 = edge.y
                 edge_x.extend([x0, x1, None])
                 edge_y.extend([y0, y1, None])
-            # for neighbor in neighbors:
-            #     x1 = nodes[neighbor].x
-            #     y1 = nodes[neighbor].y
-            #     edge_x.extend([x0, x1, None])
-            #     edge_y.extend([y0, y1, None])
 
         edge_trace = go.Scatter(
             x=edge_x, y=edge_y,
@@ -35,12 +24,12 @@ class Renderer:
             mode='lines'
         )
 
-        node_x = [node.x for node in graph.get_nodes().values()]
-        node_y = [node.y for node in graph.get_nodes().values()]
-        node_name = [node for node in graph.get_nodes().keys()]
+        node_x = [node.x for node in graph.get_all_nodes().values()]
+        node_y = [node.y for node in graph.get_all_nodes().values()]
+        node_name = [node for node in graph.get_all_nodes().keys()]
         node_color = [
             Renderer.map_color(node.color.value)
-            for node in graph.get_nodes().values()
+            for node in graph.get_all_nodes().values()
         ]
 
         node_trace = go.Scatter(
@@ -81,11 +70,10 @@ class Renderer:
     # def render_drones(self) -> None: #adds drones on top of graph
 
 
-if __name__ == "__main__":
-    network = NetworkParser.load("03_priority_puzzle.txt")
-    graph = network.to_graph()
-    Renderer().render_network(graph)
-    # Renderer().render_network(graph.get_graph(), graph.get_nodes())
+# if __name__ == "__main__":
+#     network = NetworkParser.load("03_priority_puzzle.txt")
+#     graph = network.to_graph()
+#     Renderer().render_network(graph)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # import plotly.graph_objects as go

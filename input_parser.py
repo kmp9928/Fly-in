@@ -11,16 +11,17 @@ from errors import (
     MetadataFormatError,
     MetadataTagError,
     ModelValidationError,
+    NetworkFileError
 )
-from models import ZoneType, Color, DronesN, Zone, Connection
+from models import ZoneType, Color, DronesN, Node, Connection
 from graph import Graph
 
 
 class Network(BaseModel):
     nb_drones: DronesN
-    start_hub: Zone
-    end_hub: Zone
-    hubs: List[Zone]
+    start_hub: Node
+    end_hub: Node
+    hubs: List[Node]
     connections: List[Connection]
 
     @model_validator(mode='after')
@@ -288,7 +289,7 @@ class NetworkParser:
 
 # if __name__ == "__main__":
 #     try:
-#         parser = NetworkParser.load("03_basic_capacity.txt")
+#         parser = NetworkParser.load("03_priority_puzzle.txt")
 #         print(f"nb_drones is: {parser.nb_drones}\n")
 #         print(f"start_hub is: {parser.start_hub}\n")
 #         print(f"end_hub is: {parser.end_hub}\n")

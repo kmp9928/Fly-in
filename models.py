@@ -25,7 +25,7 @@ class DronesN(BaseModel):
     line_n: int
 
 
-class Zone(BaseModel):
+class Node(BaseModel):
     name: str
     x: int = Field(ge=0)
     y: int

@@ -80,3 +80,7 @@ class ModelValidationError(NetworkFileError):
                 ])
             }"
         )
+
+
+class FlowGraphError(Exception):
+    pass
