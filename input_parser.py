@@ -11,7 +11,6 @@ from errors import (
     MetadataFormatError,
     MetadataTagError,
     ModelValidationError,
-    NetworkFileError
 )
 from models import ZoneType, Color, DronesN, Node, Connection
 from graph import Graph
@@ -103,18 +102,11 @@ class Network(BaseModel):
         return self
 
     @model_validator(mode='after')
-    def check_connection_uniqueness(self) -> Self:
-        links: Dict[int, Dict[str, str]] = {
-            n: {
-                "name1": connection.from_hub,
-                "name2": connection.to_hub
-            }
-            for n, connection in enumerate(self.connections)
-        }
-        unique_links: Set[Tuple[str, str]] = set()
-        for n, link in links.items():
-            normalized_pair = tuple(sorted([link["name1"], link["name2"]]))
-            if normalized_pair in unique_links:
+    def check_connection_uniqueness(self) -> Self: #changed to somethign cleaner - test!!!!!!
+        unique_connections: List[Tuple[str, str]] = []
+        for n, connection in enumerate(self.connections):
+            normalized_pair = sorted((connection.from_hub, connection.to_hub))
+            if normalized_pair in unique_connections:
                 raise ValidationError.from_exception_data(
                     title="Network",
                     line_errors=[{
@@ -125,8 +117,7 @@ class Network(BaseModel):
                         "loc": ("connections", n)
                     }]
                 )
-            else:
-                unique_links.add(normalized_pair)
+            unique_connections.append(normalized_pair)
         return self
 
     def to_graph(self) -> Graph:

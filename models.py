@@ -12,12 +12,24 @@ class ZoneType(Enum):
 
 
 class Color(Enum):
-    NONE = "none"
-    GREEN = "green"
+    NONE = "none" #if none the defaults to white!!!!!????
+    BLACK = "black"
     BLUE = "blue"
-    RED = "red"
-    YELLOW = "yellow"
+    BROWN = "brown"
+    CRIMSON = "crimson"
+    DARKRED = "darkred"
+    GOLD = "gold"
+    GREEN = "green"
+    MAGENTA = "magenta"
+    MAROON = "maroon"
     ORANGE = "orange"
+    PURPLE = "purple"
+    RAINBOW = "rainbow"
+    RED = "red"
+    TEAL = "teal"
+    VIOLET = "violet"
+    WHITE = "white"
+    YELLOW = "yellow"
 
 
 class DronesN(BaseModel):
@@ -33,6 +45,12 @@ class Node(BaseModel):
     color: Optional[Color] = Field(default=Color.NONE)
     max_drones: Optional[int] = Field(default=1, ge=1)
     line_n: int
+
+    @model_validator(mode='after')
+    def check_color(self) -> Self:
+        if self.color == Color.NONE:
+            self.color = Color.WHITE
+        return self
 
     @model_validator(mode='after')
     def check_name(self) -> Self:

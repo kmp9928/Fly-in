@@ -1,8 +1,149 @@
 from sys import maxsize
 from typing import List, Dict, Tuple
-from graph import Graph
-from flow_graph import FlowGraph
+from dataclasses import dataclass
+from input_parser import Node
 from errors import FlowGraphError
+from graph import Graph, ConnectingNodes
+
+
+#make type of tuple [str, int]
+
+
+@dataclass
+class Edge:
+    to: str
+    capacity: int
+    cost: int
+    reverse: int = 0
+    original: bool = False
+
+
+class FlowGraph:
+    start: str
+    end: str
+    flow_graph: Dict[str, List[Edge]]
+    forbidden: List[str]
+
+    def __init__(self, graph: Graph) -> None:
+        self.start = FlowGraph.make_out_name(graph.get_start().name)
+        self.end = FlowGraph.make_in_name(graph.get_end().name)
+        self.flow_graph = {}
+        self.forbidden = [
+            FlowGraph.make_in_name(graph.start.name),
+            FlowGraph.make_out_name(graph.end.name)
+        ]
+
+        for connection, capacity in graph.get_all_edges().items():
+            self.add_edge_pair(connection, capacity)
+            self.add_residual_pair(connection)
+
+        for node in graph.get_all_nodes().values():
+            if node.zone.value != "blocked":
+                self.add_inner_pair(node)
+
+        self.add_reverse_index()
+
+    @staticmethod
+    def make_in_name(name: str) -> str:
+        return name + "_in"
+
+    @staticmethod
+    def make_out_name(name: str) -> str:
+        return name + "_out"
+
+    def add_edge_pair(self, edges: ConnectingNodes, capacity: int) -> None:
+        self.add_edge(
+            FlowGraph.make_out_name(edges[0]),
+            FlowGraph.make_in_name(edges[1]),
+            capacity,
+            1,
+            True
+        )
+        self.add_edge(
+            FlowGraph.make_out_name(edges[1]),
+            FlowGraph.make_in_name(edges[0]),
+            capacity,
+            1,
+            True
+        )
+
+    def add_residual_pair(self, edges: ConnectingNodes) -> None:
+        self.add_edge(
+            FlowGraph.make_in_name(edges[0]),
+            FlowGraph.make_out_name(edges[1]),
+            0,
+            -1
+        )
+        self.add_edge(
+            FlowGraph.make_in_name(edges[1]),
+            FlowGraph.make_out_name(edges[0]),
+            0,
+            -1
+        )
+
+    def add_inner_pair(self, node: Node) -> None:
+        node_costs: Dict[str, int] = {
+            "normal": 1,
+            "restricted": 10,
+            "priority": 0
+        }
+
+        self.add_edge(
+            FlowGraph.make_in_name(node.name),
+            FlowGraph.make_out_name(node.name),
+            node.max_drones,
+            node_costs[node.zone.value],
+            True
+        )
+        self.add_edge(
+            FlowGraph.make_out_name(node.name),
+            FlowGraph.make_in_name(node.name),
+            0,
+            -node_costs[node.zone.value],
+        )
+
+    def is_forbidden(self, node_name: str) -> bool:
+        return node_name in self.forbidden
+
+    def add_edge(
+        self,
+        from_id: str,
+        to_id: str,
+        capacity: int,
+        cost: int,
+        original: bool = False
+    ) -> None:
+        edge = Edge(
+            to=to_id,
+            capacity=capacity,
+            cost=cost,
+            original=original
+        )
+        if not self.is_forbidden(from_id) and not self.is_forbidden(to_id):
+            if self.flow_graph.get(from_id) is None:
+                self.flow_graph[from_id] = [edge]
+            else:
+                self.flow_graph[from_id].extend([edge])
+
+    def add_reverse_index(self) -> None:
+        for from_id, edges in self.flow_graph.items():
+            for edge in edges:
+                for i, edges_of_reverse in enumerate(self.flow_graph[edge.to]):
+                    if edges_of_reverse.to == from_id:
+                        break
+                edge.reverse = i
+
+    def get_nodes(self) -> List[str]:
+        return list(self.flow_graph.keys())
+
+    def get_edges(self, node: str) -> List[Edge]:
+        return self.flow_graph[node]
+
+    def get_start(self) -> str:
+        return self.start
+
+    def get_end(self) -> str:
+        return self.end
 
 
 type Path = List[str]
@@ -10,27 +151,18 @@ type Path = List[str]
 
 class MinCostMaxFlowAlgorithm:
     def find_paths(self, graph: Graph) -> List[Path]:
-        return MinCostMaxFlowTask(graph).run()
-
-
-class MinCostMaxFlowTask:
-    flow_graph: FlowGraph
-
-    def __init__(self, graph: Graph) -> None:
-        self.flow_graph = FlowGraph(graph)
-
-    def run(self) -> List[Path]:
+        flow_graph = FlowGraph(graph)
         total_flow: int = 0
         total_cost: int = 0
 
         while True:
-            result = self.bellman_ford()
+            result = MinCostMaxFlowAlgorithm.bellman_ford(flow_graph)
 
             if result is None:
                 break
 
             predecessors, path_cost = result
-            amount = self.augment(predecessors)
+            amount = MinCostMaxFlowAlgorithm.augment(flow_graph, predecessors)
 
             total_flow += amount
             total_cost += amount * path_cost
@@ -38,17 +170,21 @@ class MinCostMaxFlowTask:
         if total_flow == 0:
             raise FlowGraphError("End of network unreachable!")
 
-        return MinCostMaxFlowTask.collapse_paths(self.decompose_paths())
+        return MinCostMaxFlowAlgorithm.collapse_paths(
+            MinCostMaxFlowAlgorithm.decompose_paths(flow_graph)
+        )
 
-    def bellman_ford(self) -> Tuple[Dict[str, Tuple[str, int]], int]:
-        nodes: List[str] = self.flow_graph.get_nodes()
+    def bellman_ford(
+        flow_graph: FlowGraph
+    ) -> Tuple[Dict[str, Tuple[str, int]], int]:
+        nodes: List[str] = flow_graph.get_nodes()
         distances: Dict[str, int] = {
             node: maxsize for node in nodes
         }
         predecessors: Dict[str, Tuple[str, int]] = {
             node: (None, 0) for node in nodes
         }
-        distances[self.flow_graph.get_start()] = 0
+        distances[flow_graph.get_start()] = 0
 
         for _ in range(len(nodes) - 1):
             updated = False
@@ -57,7 +193,7 @@ class MinCostMaxFlowTask:
                 if distances[node] == maxsize:
                     continue
 
-                for i, edge in enumerate(self.flow_graph.get_edges(node)):
+                for i, edge in enumerate(flow_graph.get_edges(node)):
                     if edge.capacity <= 0:
                         continue
 
@@ -74,70 +210,72 @@ class MinCostMaxFlowTask:
             if distances[node] == maxsize:
                 continue
 
-            for i, edge in enumerate(self.flow_graph.get_edges(node)):
+            for i, edge in enumerate(flow_graph.get_edges(node)):
                 if edge.capacity <= 0:
                     continue
 
                 if distances[node] + edge.cost < distances[edge.to]:
                     raise FlowGraphError("Negative cycle detected.")
 
-        if predecessors[self.flow_graph.get_end()][0] is None:
+        if predecessors[flow_graph.get_end()][0] is None:
             return None
 
-        return predecessors, distances[self.flow_graph.get_end()]
+        return predecessors, distances[flow_graph.get_end()]
 
-    def augment(self, predecessors: Dict[str, Tuple[str, int]]) -> int:
+    def augment(
+        flow_graph: FlowGraph, predecessors: Dict[str, Tuple[str, int]]
+    ) -> int:
         amount: int = maxsize
-        node: str = self.flow_graph.get_end()
+        node: str = flow_graph.get_end()
 
-        while node != self.flow_graph.get_start():
+        while node != flow_graph.get_start():
             previous, i = predecessors[node]
-            edge = self.flow_graph.get_edges(previous)[i]
+            edge = flow_graph.get_edges(previous)[i]
             amount = min(amount, edge.capacity)
             node = previous
 
-        node = self.flow_graph.get_end()
-        while node != self.flow_graph.get_start():
+        node = flow_graph.get_end()
+        while node != flow_graph.get_start():
             previous, i = predecessors[node]
-            edge = self.flow_graph.get_edges(previous)[i]
-            reverse = self.flow_graph.get_edges(edge.to)[edge.reverse]
+            edge = flow_graph.get_edges(previous)[i]
+            reverse = flow_graph.get_edges(edge.to)[edge.reverse]
             edge.capacity -= amount
             reverse.capacity += amount
             node = previous
 
         return amount
 
-    def decompose_paths(self) -> List[Path]:
+    def decompose_paths(flow_graph: FlowGraph) -> List[Path]:
         paths: List[Path] = []
         remaining_flow: Dict[Tuple[str, int], int] = {}
 
-        for node in self.flow_graph.get_nodes():
-            for i, edge in enumerate(self.flow_graph.get_edges(node)):
+        for node in flow_graph.get_nodes():
+            for i, edge in enumerate(flow_graph.get_edges(node)):
                 if edge.original:
-                    reverse_edges = self.flow_graph.get_edges(edge.to)
+                    reverse_edges = flow_graph.get_edges(edge.to)
                     used = reverse_edges[edge.reverse].capacity
                     if used > 0:
                         remaining_flow[(node, i)] = used
 
         while True:
-            path = [self.flow_graph.get_start()]
-            node = self.flow_graph.get_start()
+            path = [flow_graph.get_start()]
+            node = flow_graph.get_start()
             visited = set()
 
-            while node != self.flow_graph.get_end():
+            while node != flow_graph.get_end():
                 if node in visited:
                     raise FlowGraphError("Cycle while decomposing.")
 
                 visited.add(node)
                 next_item = None
 
-                for i, edge in enumerate(self.flow_graph.get_edges(node)):
+                for i, edge in enumerate(flow_graph.get_edges(node)):
                     if edge.original and remaining_flow.get((node, i), 0) > 0:
                         next_item = (i, edge)
                         break
 
                 if next_item is None:
-                    if node == self.flow_graph.get_start():
+                    if node == flow_graph.get_start():
                         return paths
                     raise FlowGraphError(
                         "Broken flow path stopped before goal."

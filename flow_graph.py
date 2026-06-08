@@ -1,153 +1,153 @@
-from typing import Dict, List, Tuple
-from input_parser import Node
-from graph import Graph
-from dataclasses import dataclass
+# from typing import Dict, List
+# from input_parser import Node
+# from graph import Graph, ConnectingNodes
+# from dataclasses import dataclass
 
 
-@dataclass
-class Edge:
-    to: str
-    capacity: int
-    cost: int
-    reverse: int = 0
-    original: bool = False
+# @dataclass
+# class Edge:
+#     to: str
+#     capacity: int
+#     cost: int
+#     reverse: int = 0
+#     original: bool = False
 
-    # def __repr__(self) -> str:
-    #     return (
-    #         f"Edge(to={self.to!r}, "
-    #         f"capacity={self.capacity}, "
-    #         f"cost={self.cost}, "
-    #         f"reverse={self.reverse},"
-    #         f"original={self.original})"
-    #     )
+#     # def __repr__(self) -> str:
+#     #     return (
+#     #         f"Edge(to={self.to!r}, "
+#     #         f"capacity={self.capacity}, "
+#     #         f"cost={self.cost}, "
+#     #         f"reverse={self.reverse},"
+#     #         f"original={self.original})"
+#     #     )
 
 
-class FlowGraph:
-    start: str
-    end: str
-    flow_graph: Dict[str, List[Edge]]
-    forbidden: List[str]
+# class FlowGraph:
+#     start: str
+#     end: str
+#     flow_graph: Dict[str, List[Edge]]
+#     forbidden: List[str]
 
-    def __init__(self, graph: Graph) -> None:
-        self.start = FlowGraph.make_out_name(graph.get_start().name)
-        self.end = FlowGraph.make_in_name(graph.get_end().name)
-        self.flow_graph = {}
-        self.forbidden = [
-            FlowGraph.make_in_name(graph.start.name),
-            FlowGraph.make_out_name(graph.end.name)
-        ]
+#     def __init__(self, graph: Graph) -> None:
+#         self.start = FlowGraph.make_out_name(graph.get_start().name)
+#         self.end = FlowGraph.make_in_name(graph.get_end().name)
+#         self.flow_graph = {}
+#         self.forbidden = [
+#             FlowGraph.make_in_name(graph.start.name),
+#             FlowGraph.make_out_name(graph.end.name)
+#         ]
 
-        for connection, capacity in graph.get_all_edges().items():
-            self.add_edge_pair(connection, capacity)
-            self.add_residual_pair(connection)
+#         for connection, capacity in graph.get_all_edges().items():
+#             self.add_edge_pair(connection, capacity)
+#             self.add_residual_pair(connection)
 
-        for node in graph.get_all_nodes().values():
-            if node.zone.value != "blocked":
-                self.add_inner_pair(node)
+#         for node in graph.get_all_nodes().values():
+#             if node.zone.value != "blocked":
+#                 self.add_inner_pair(node)
 
-        self.add_reverse_index()
+#         self.add_reverse_index()
 
-    @staticmethod
-    def make_in_name(name: str) -> str:
-        return name + "_in"
+#     @staticmethod
+#     def make_in_name(name: str) -> str:
+#         return name + "_in"
 
-    @staticmethod
-    def make_out_name(name: str) -> str:
-        return name + "_out"
+#     @staticmethod
+#     def make_out_name(name: str) -> str:
+#         return name + "_out"
 
-    def add_edge_pair(self, edges: Tuple[str, str], capacity: int) -> None:
-        self.add_edge(
-            FlowGraph.make_out_name(edges[0]),
-            FlowGraph.make_in_name(edges[1]),
-            capacity,
-            1,
-            True
-        )
-        self.add_edge(
-            FlowGraph.make_out_name(edges[1]),
-            FlowGraph.make_in_name(edges[0]),
-            capacity,
-            1,
-            True
-        )
+#     def add_edge_pair(self, edges: ConnectingNodes, capacity: int) -> None:
+#         self.add_edge(
+#             FlowGraph.make_out_name(edges[0]),
+#             FlowGraph.make_in_name(edges[1]),
+#             capacity,
+#             1,
+#             True
+#         )
+#         self.add_edge(
+#             FlowGraph.make_out_name(edges[1]),
+#             FlowGraph.make_in_name(edges[0]),
+#             capacity,
+#             1,
+#             True
+#         )
 
-    def add_residual_pair(self, edges: Tuple[str, str]) -> None:
-        self.add_edge(
-            FlowGraph.make_in_name(edges[0]),
-            FlowGraph.make_out_name(edges[1]),
-            0,
-            -1
-        )
-        self.add_edge(
-            FlowGraph.make_in_name(edges[1]),
-            FlowGraph.make_out_name(edges[0]),
-            0,
-            -1
-        )
+#     def add_residual_pair(self, edges: ConnectingNodes) -> None:
+#         self.add_edge(
+#             FlowGraph.make_in_name(edges[0]),
+#             FlowGraph.make_out_name(edges[1]),
+#             0,
+#             -1
+#         )
+#         self.add_edge(
+#             FlowGraph.make_in_name(edges[1]),
+#             FlowGraph.make_out_name(edges[0]),
+#             0,
+#             -1
+#         )
 
-    def add_inner_pair(self, node: Node) -> None:
-        node_costs: Dict[str, int] = {
-            "normal": 1,
-            "restricted": 10,
-            "priority": 0
-        }
+#     def add_inner_pair(self, node: Node) -> None:
+#         node_costs: Dict[str, int] = {
+#             "normal": 1,
+#             "restricted": 10,
+#             "priority": 0
+#         }
 
-        self.add_edge(
-            FlowGraph.make_in_name(node.name),
-            FlowGraph.make_out_name(node.name),
-            node.max_drones,
-            node_costs[node.zone.value],
-            True
-        )
-        self.add_edge(
-            FlowGraph.make_out_name(node.name),
-            FlowGraph.make_in_name(node.name),
-            0,
-            -node_costs[node.zone.value],
-        )
+#         self.add_edge(
+#             FlowGraph.make_in_name(node.name),
+#             FlowGraph.make_out_name(node.name),
+#             node.max_drones,
+#             node_costs[node.zone.value],
+#             True
+#         )
+#         self.add_edge(
+#             FlowGraph.make_out_name(node.name),
+#             FlowGraph.make_in_name(node.name),
+#             0,
+#             -node_costs[node.zone.value],
+#         )
 
-    def is_forbidden(self, node_name: str) -> bool:
-        return node_name in self.forbidden
+#     def is_forbidden(self, node_name: str) -> bool:
+#         return node_name in self.forbidden
 
-    def add_edge(
-        self,
-        from_id: str,
-        to_id: str,
-        capacity: int,
-        cost: int,
-        original: bool = False
-    ) -> None:
-        edge = Edge(
-            to=to_id,
-            capacity=capacity,
-            cost=cost,
-            original=original
-        )
-        if not self.is_forbidden(from_id) and not self.is_forbidden(to_id):
-            if self.flow_graph.get(from_id) is None:
-                self.flow_graph[from_id] = [edge]
-            else:
-                self.flow_graph[from_id].extend([edge])
+#     def add_edge(
+#         self,
+#         from_id: str,
+#         to_id: str,
+#         capacity: int,
+#         cost: int,
+#         original: bool = False
+#     ) -> None:
+#         edge = Edge(
+#             to=to_id,
+#             capacity=capacity,
+#             cost=cost,
+#             original=original
+#         )
+#         if not self.is_forbidden(from_id) and not self.is_forbidden(to_id):
+#             if self.flow_graph.get(from_id) is None:
+#                 self.flow_graph[from_id] = [edge]
+#             else:
+#                 self.flow_graph[from_id].extend([edge])
 
-    def add_reverse_index(self) -> None:
-        for from_id, edges in self.flow_graph.items():
-            for edge in edges:
-                for i, edges_of_reverse in enumerate(self.flow_graph[edge.to]):
-                    if edges_of_reverse.to == from_id:
-                        break
-                edge.reverse = i
+#     def add_reverse_index(self) -> None:
+#         for from_id, edges in self.flow_graph.items():
+#             for edge in edges:
+#                 for i, edges_of_reverse in enumerate(self.flow_graph[edge.to]):
+#                     if edges_of_reverse.to == from_id:
+#                         break
+#                 edge.reverse = i
 
-    def get_nodes(self) -> List[str]:
-        return list(self.flow_graph.keys())
+#     def get_nodes(self) -> List[str]:
+#         return list(self.flow_graph.keys())
 
-    def get_edges(self, node: str) -> List[Edge]:
-        return self.flow_graph[node]
+#     def get_edges(self, node: str) -> List[Edge]:
+#         return self.flow_graph[node]
 
-    def get_start(self) -> str:
-        return self.start
+#     def get_start(self) -> str:
+#         return self.start
 
-    def get_end(self) -> str:
-        return self.end
+#     def get_end(self) -> str:
+#         return self.end
 
 
 # if __name__ == "__main__":
