@@ -17,8 +17,7 @@ INCLUDE_FILES := \
 
 help:
 	@echo "Commands:"
-	@echo "make install			Installs development dependencies: mypy, \
-	flake8, pip(upgrade) and pydantic"
+	@echo "make install			Installs development dependencies: mypy, flake8, pip(upgrade) and pydantic"
 	@echo "make run 			runs main.py"
 	@echo "make debug			runs the main script in pdb"
 	@echo "make lint			runs flake8 and mypy tests"

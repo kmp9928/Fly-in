@@ -71,7 +71,7 @@ class Network(BaseModel):
                     ),
                     "loc": ("end_hub", "x and y"),
                     "input": {
-                        "start_x": self.start_hub.x, "end_x": self.end_hub.x #new check if issues...
+                        "start_x": self.start_hub.x, "end_x": self.end_hub.x
                     }
                 }]
             )
@@ -98,7 +98,7 @@ class Network(BaseModel):
                             f"'{zone.name}' has invalid integer coordinates"
                         ),
                         "loc": ("hubs", n),
-                        "input": {"zone": zone.name, "x": zone.x} #new check if issues...
+                        "input": {"zone": zone.name, "x": zone.x}
                     }]
                 )
         return self
@@ -126,7 +126,7 @@ class Network(BaseModel):
                             f"Zone '{zone}' is not unique"
                         ),
                         "loc": ("hubs", n),
-                        "input": zone #new check if issues...
+                        "input": zone
                     }]
                 )
         return self
@@ -180,7 +180,7 @@ class Network(BaseModel):
                             f"Connection {name1}-{name2} has undefined zone"
                         ),
                         "loc": ("connections", n),
-                        "input": f"{name1}-{name2}" #new check if issues...
+                        "input": f"{name1}-{name2}"
                     }]
                 )
         return self
@@ -209,7 +209,7 @@ class Network(BaseModel):
                             f"Connection {normalized_pair} is duplicated"
                         ),
                         "loc": ("connections", n),
-                        "input": normalized_pair  #new check if issues...
+                        "input": normalized_pair
                     }]
                 )
             unique_connections.append(normalized_pair)
@@ -468,26 +468,3 @@ class NetworkParser:
             validation_errors.items(), key=lambda item: item[0]
             )
         })
-
-
-# if __name__ == "__main__":
-#     try:
-#         parser = NetworkParser.load("03_priority_puzzle.txt")
-#         print(f"nb_drones is: {parser.nb_drones}\n")
-#         print(f"start_hub is: {parser.start_hub}\n")
-#         print(f"end_hub is: {parser.end_hub}\n")
-#         for n, hub in enumerate(parser.hubs, start=1):
-#             print(f"hub {n} is: {hub}\n")
-#         for n, connection in enumerate(parser.connections, start=1):
-#             print(f"connection {n} is: {connection}\n")
-#     except NetworkFileError as e:
-#         print(e)
-
-#check in call ValueError for wrong def of any elemnt above (like no name or missing x or y or field not defined in model)...
-# check ValueError
-#what about passing str in max_link_capacity, zone clor or max_drones?
-#what are valid integer coord? nothing can be firther than end?
-#check types of zones throw error when not valid..or any enum
-#maybe data{} should also save line num
-# max_drones should be default to nb_drones for start and end hub???
-#start_hub and end_hub should not have movement cost??? so even if it's set to normal check execution

@@ -94,13 +94,3 @@ class Graph:
     def get_drones_n(self) -> int:
         """Returns the configured total capacity number of drones."""
         return self.drones.number
-
-
-# if __name__ == "__main__":
-#     network = NetworkParser.load("01_linear_path.txt")
-#     graph = Graph(network)
-#     print(graph.get_graph())
-#     print(graph.get_nodes())
-
-
-#get_graph retuns list without any issues since the initial construction was with a set so no duplicates

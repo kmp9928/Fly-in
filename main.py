@@ -89,5 +89,5 @@ if __name__ == "__main__":
     print("\n\n= = = = = = Welcome to Fly-In = = = = = =\n\n")
     try:
         fly_in = FlyIn.run()
-    except (NetworkFileError, FlowGraphError) as e: #ValueError too???
+    except (NetworkFileError, FlowGraphError) as e:
         print(f"Error: {e}")

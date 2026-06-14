@@ -45,7 +45,7 @@ class PathsFindingAlgorithm(Protocol):
         ...
 
 
-class RoutePlanner: #chooses best path/s and assings drones to it/them
+class RoutePlanner:
     """Manages optimal distribution and scheduling configurations for
     multi-drone deployment.
 
@@ -86,14 +86,12 @@ class RoutePlanner: #chooses best path/s and assings drones to it/them
                     last drone arrival.
         """
         best_subset: List[Path] = []
-        best_assignment: List[List[Drone]] = [] #list of drones per list of subset (best paths)
+        best_assignment: List[List[Drone]] = []
         min_turns: int = maxsize
 
         for size in range(1, len(self.paths) + 1):
             for subset in combinations(self.paths, size):
-                # print(f"subset to check {subset}")
                 turns, assignment = self.drone_assignment(list(subset))
-                # print(f"has turns {turns} and list of drones {assignment}")
 
                 if turns < min_turns:
                     min_turns = turns
@@ -157,7 +155,7 @@ class RoutePlanner: #chooses best path/s and assings drones to it/them
                 - The optimal target Path for current assignment placement.
                 - The predicted step timeframe required to finalize that route.
         """
-        best_path: Path = [] #None
+        best_path: Path = []
         min_turns: int = maxsize
 
         for index, path in enumerate(paths):
@@ -167,7 +165,7 @@ class RoutePlanner: #chooses best path/s and assings drones to it/them
             total_turns = 0
             # print(f"path is {path[1:]}")
             for node in path:
-                if node == self.graph.get_start().name:   #skips start???
+                if node == self.graph.get_start().name:
                     continue
                 if self.graph.get_node(node).zone.value == "restricted":
                     total_turns += 2
@@ -182,9 +180,7 @@ class RoutePlanner: #chooses best path/s and assings drones to it/them
             for index in range(0, len(path) - 1):
                 bottleneck_capacity_edges.append(
                     self.graph.get_edge((path[index], path[index + 1]))
-                    # self.graph.get_all_edges()[(path[index], path[index + 1])]
                 )
-                # bottleneck_capacity_edges.append(connections_dic[(path[n], path[n + 1])])
             path_capacity = min(
                 min(bottleneck_capacity_edges), bottleneck_capacity
             )
@@ -192,8 +188,6 @@ class RoutePlanner: #chooses best path/s and assings drones to it/them
             completion_time = (
                 total_turns + ceil(drones_in_path / path_capacity) - 1
             )
-            # print(f"completion_time {completion_time}")
-            # print(f"path_duration{total_turns}, path_capacity{path_capacity} completion_time {completion_time}")
 
             if completion_time < min_turns:
                 min_turns = completion_time

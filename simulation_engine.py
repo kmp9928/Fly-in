@@ -1,7 +1,7 @@
 from typing import List, Dict, Tuple
 import copy
 from math import ceil
-from input_parser import Node
+from models import Node
 from graph import Graph
 from min_cost_max_flow import Path
 from route_planner import Drone
@@ -74,7 +74,7 @@ class SimulationEngine:
 
         return path_with_edges
 
-    def simulate_turns(self) -> Dict[int, Dict[str, List[Drone]]]: #Dict[int, Dict[str, List[str]]]: #per turn per location the list of drones
+    def simulate_turns(self) -> Dict[int, Dict[str, List[Drone]]]:
         """Executes the step-by-step turn loop of the global drone simulation.
 
         Initializes initial fleet allocations at the network source node, steps
@@ -85,7 +85,7 @@ class SimulationEngine:
             A chronological ledger history mapping turn IDs to consolidated
                 node location structures.
         """
-        simulation_history: Dict[int, Dict[str, List[Drone]]] = {} #might not need it?????
+        simulation_history: Dict[int, Dict[str, List[Drone]]] = {}
         all_drones: List[Drone] = sorted(
             list(
                 drone
@@ -110,7 +110,6 @@ class SimulationEngine:
         simulation_history[0] = SimulationEngine.consolidate_paths(
             copy.deepcopy(paths_state)
         )
-        # print(simulation_history[0])
 
         for turn in range(1, self.turns + 1):
             for drone in all_drones:
@@ -134,7 +133,6 @@ class SimulationEngine:
                     )
                     drone.turns += 1
 
-            # self.current_occupancy.update(self.calculate_occupancy())
             simulation_history[turn] = SimulationEngine.consolidate_paths(
                 copy.deepcopy(paths_state)
             )
@@ -157,7 +155,6 @@ class SimulationEngine:
         self.metrics.count_turns_per_drone(simulation_history[self.turns][end])
 
         return simulation_history
-        # Renderer.render_simulation(self.graph, simulation_history)
 
     def calculate_occupancy(self) -> Dict[str, int]:
         """Maps operational capacity ceilings to all active path features and
@@ -174,9 +171,6 @@ class SimulationEngine:
                 else self.graph.get_edge(
                     (point.split("-")[0], point.split("-")[1])
                 )
-                # else self.graph.get_all_edges()[
-                #     (point.split("-")[0], point.split("-")[1])
-                # ]
             )
             for path in self.paths
             for point in path
@@ -201,7 +195,6 @@ class SimulationEngine:
         nodes: Dict[str, Node] = self.graph.get_all_nodes()
         current_index: int = path.index(current)
 
-        # print(f"current occupancy before {self.current_occupancy}")
         if nodes.get(path[current_index + 1]) is None:
             if nodes[path[current_index + 2]].zone.value == "restricted":
                 next_point = path[current_index + 1]
@@ -226,7 +219,6 @@ class SimulationEngine:
                 self.current_occupancy[current] += 1
             if next_point != self.graph.get_end().name:
                 self.current_occupancy[next_point] -= 1
-            # print(f"current occupancy after {self.current_occupancy}")
             return next_point
 
     def move_drones(
@@ -261,7 +253,7 @@ class SimulationEngine:
                 SimulationEngine.switch_drone_status(drone, True)
 
             current_index = state[from_point].index(drone)
-            del state[from_point][current_index]#always removes first drone anyway???
+            del state[from_point][current_index]
 
     def calculate_edge_coordinate(self, to_point: str) -> Tuple[float, float]:
         """Calculates the center-point spatial coordinates of an edge path.
@@ -306,7 +298,7 @@ class SimulationEngine:
     def print_simulation_output(self, output: Dict[str, List[Drone]]) -> None:
         """Prints a standardized logs line detailing asset movements during the
         current turn."""
-        formatted_output: List = []
+        formatted_output: List[str] = []
 
         for point, drones in output.items():
             for drone in drones:
@@ -317,7 +309,7 @@ class SimulationEngine:
         print((" ").join(sorted(formatted_output)))
 
     @staticmethod
-    def switch_drone_status(drone: Drone, moved: bool):
+    def switch_drone_status(drone: Drone, moved: bool) -> None:
         """Sets the action flag specifying whether a drone moved."""
         drone.moved = moved
 
@@ -364,7 +356,7 @@ class SimulationEngine:
             """Retrieves the history of aggregate turn movements."""
             return self.drones_per_turn
 
-        def count_turns_per_drone(self, drones: List[Drone]) -> None: #might be wrong if counting when turns dont move from star right away!!!!
+        def count_turns_per_drone(self, drones: List[Drone]) -> None:
             """Maps total active travel windows for assets arriving at the
             destination node."""
             self.turns_per_drone.update(
@@ -389,37 +381,3 @@ class SimulationEngine:
                 sum(turns for turns in self.turns_per_drone.values()) /
                 len(self.turns_per_drone.keys())
             )
-
-
-# if __name__ == "__main__":
-#     try:
-#         graph = NetworkParser.load("./maps/challenger/01_the_impossible_dream.txt").to_graph()
-
-#         path_finding_algorithm = MinCostMaxFlowAlgorithm()
-
-#         subset = RoutePlanner(path_finding_algorithm, graph)
-#         path, drone_assignment, turns = subset.schedule_drones()
-#         # print(path)
-#         # print(drone_assignment)
-#         # print(turns)
-#         simulation = SimulationEngine(path, drone_assignment, turns, graph)
-#         print()
-#         simulation.simulate_turns()
-#         # print()
-#         # simulation.print_secondary_metrics()
-#         # print()
-
-#         # for turn, drones in turns.items():
-#         #     print(f"turn {turn} has {drones}\n")
-#         # MinCostMaxFlow.run(flow_graph.flow_graph), graph.get_all_nodes(), 5, graph.get_connections()
-#         # print(repr(flow_graph.flow_graph))
-#         # print()
-#         # PathSelection(MinCostMaxFlow.find_cheapest_paths(flow_graph.flow_graph), graph.get_all_nodes(), 5, graph.get_connections())
-#     except ValueError as e:
-#         print(f"Error {e}")
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Scheduler
-#     choose_best_subset()
-#     assign_drones()
-#     simulate_turns()

@@ -76,9 +76,9 @@ class Node(BaseModel):
     name: str
     x: int = Field(ge=0)
     y: int
-    zone: ZoneType = Field(default=ZoneType.NORMAL) #removed optional and set default to normal
-    color: Color = Field(default=Color.NONE) #removed optional and set default to none...check renderer!!!
-    max_drones: int = Field(default=1, ge=1) #removed optional and set default to 1
+    zone: ZoneType = Field(default=ZoneType.NORMAL)
+    color: Color = Field(default=Color.NONE)
+    max_drones: int = Field(default=1, ge=1)
     line_n: int
 
     @model_validator(mode='after')
@@ -101,7 +101,7 @@ class Node(BaseModel):
                         f"Wrong value '{self.name}'"
                     ),
                     "loc": ("name", self.line_n),
-                    "input": self.name #new...see if issues
+                    "input": self.name
                 }]
             )
         return self
@@ -121,7 +121,7 @@ class Connection(BaseModel):
     """
     from_hub: str
     to_hub: str
-    max_link_capacity: int = Field(default=1, ge=1) #removed optional and set default to 1
+    max_link_capacity: int = Field(default=1, ge=1)
     line_n: int
 
     @model_validator(mode='after')
@@ -144,7 +144,7 @@ class Connection(BaseModel):
                         f"Wrong value '{self.from_hub}-{self.to_hub}'"
                     ),
                     "loc": ("name", self.line_n),
-                    "input": f"{self.from_hub}-{self.to_hub}" #new...see if issues
+                    "input": f"{self.from_hub}-{self.to_hub}"
                 }]
             )
         return self

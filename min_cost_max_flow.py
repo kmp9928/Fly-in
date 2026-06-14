@@ -2,7 +2,7 @@ from sys import maxsize
 from dataclasses import dataclass
 from typing import List, Dict, Tuple
 from errors import FlowGraphError
-from input_parser import Node
+from models import Node
 from graph import Graph, ConnectingNodes
 
 
@@ -104,7 +104,9 @@ class FlowGraph:
             True
         )
 
-    def add_residual_pair(self, edges: ConnectingNodes, edge_cost: int) -> None:
+    def add_residual_pair(
+        self, edges: ConnectingNodes, edge_cost: int
+    ) -> None:
         """Constructs backward residual capacities across external links to
         facilitate flow cancellation."""
         self.add_edge(
@@ -339,7 +341,7 @@ class MinCostMaxFlowAlgorithm:
 
         while node != flow_graph.get_start():
             previous, i = predecessors[node]
-            assert previous is not None  #says that FOR SURE prevo=oius is not None, it was just added in the type hints due to bellman ford
+            assert previous is not None
             edge = flow_graph.get_edges(previous)[i]
             amount = min(amount, edge.capacity)
             node = previous
@@ -441,179 +443,7 @@ class MinCostMaxFlowAlgorithm:
                     original_node = node[:-4]
                 if original_node not in new_path:
                     new_path.append(original_node)
-            if new_path not in result:  #decompose paths can result in the same path twice like basic_capacity since for edges from start to end with capacity > 1 the loop keeps collecting paths
+            if new_path not in result:
                 result.append(new_path)
 
         return result
-
-
-# if __name__ == "__main__":
-#     try:
-#         network = NetworkParser.load("03_priority_puzzle.txt")
-#         graph = network.to_graph()
-#         flow_graph = FlowGraph(graph)
-#         mcmf = MinCostMaxFlow(flow_graph)
-#         paths = mcmf.run()
-#         for path in paths:
-#             print(f"One possible path is: {path}")
-#         # MinCostMaxFlow.run(flow_graph.flow_graph), graph.get_all_nodes(), 5, graph.get_connections()
-#     except ValueError as e:
-#         print(f"Error {e}")
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# class SSAP:
-
-# 1. Parse graph
-# 2. Build flow network with room capacities/costs
-# 3. Run Min-Cost Max-Flow using SSAP + Bellman-Ford
-# 4. Decompose final flow into independent paths
-# 5. Choose best subset of paths
-# 6. Assign drones by path length/load
-# 7. Simulate turns simply
-
-# while there is a cheapest path from source to sink:
-#     run Bellman-Ford
-#         relax edges up to V - 1 times
-#         find cheapest augmenting path in residual graph
-
-#     if sink is unreachable:
-#         stop
-
-#     augment flow along that path
-#     update residual capacities
-
-# Bellman-Ford Uses Capacity
-# Bellman-Ford searches only usable residual edges:
-
-# if edge.capacity <= 0:
-#     continue
-# Cost decides which available path is cheapest. Capacity decides whether an edge is available at all.
-
-
-
-# 1. Min-Cost Max-Flow
-#    Finds independent candidate lanes.
-
-# 2. Path decomposition
-#    Extracts actual paths from final positive flow.
-
-# 3. Path subset selection
-#    Decides which extracted paths are worth using.
-
-# 4. Drone assignment
-#    Assigns drones to the chosen paths.
-
-# 5. Turn simulation
-#    Moves drones over time.
-
-
-# Bellman-Ford:
-#     chooses the cheapest currently available augmenting path
-#     this is where costs matter
-
-# Augmentation:
-#     reserves/uses capacity along that path
-#     this is where capacities matter
-
-# Decomposition:
-#     extracts the final used flow paths
-#     it does not decide preference
-
-
-# This specific approach is mostly the classic lem-in path scheduling heuristic.
-
-# The theory names around it are:
-
-# Network Flow
-# for finding independent paths / capacities.
-
-# Min-Cost Max-Flow
-# for finding good capacity-respecting paths with costs/preferences.
-
-# Path decomposition
-# for extracting source-to-sink routes from final flow.
-
-# Load balancing / makespan minimization
-# for assigning drones across paths to minimize the last arrival time.
-
-# The exact drone assignment problem is closest to:
-
-# Scheduling on parallel machines
-# More specifically:
-
-# makespan minimization
-# because you are minimizing:
-
-# the maximum finish time among all paths
-# In your case, each path is like a “machine” with:
-
-# startup time = path_duration
-# throughput = path_capacity
-# Then you assign drones/jobs to paths to minimize the final completion time.
-
-# So if you want search terms:
-
-# lem-in path scheduling
-# network flow path decomposition
-# min-cost max-flow path decomposition
-# load balancing minimize makespan
-# parallel machine scheduling makespan
-# flow over time
-# dynamic network flow
-# For a more mathematically exact version of “drones moving over turns with capacities,” the term is:
-
-# flow over time
-# or:
-
-# dynamic network flow
-# But the practical 42-style version is:
-
-# Min-Cost Max-Flow + path decomposition + makespan/load-balancing assignment
-
-
-
-# NetworkParser
-#     reads/validates input
-
-# Graph
-#     stores original hubs/connections/nb_drones
-#     maybe provides neighbor helpers
-
-# FlowGraph
-#     builds residual graph from Graph
-#     add_edge_pair()
-#     add_room_edges()
-#     add_tunnel_edges()
-
-# MinCostMaxFlow
-#     bellman_ford()
-#     augment()
-#     decompose_paths()
-
-# Scheduler
-#     choose_best_subset()
-#     assign_drones()
-#     simulate_turns()
-
-
-# decompose_paths takes the final flow result from Min-Cost Max-Flow and turns it into actual usable paths.
-
-# During the algorithm, Bellman-Ford finds augmenting paths and augment() updates residual capacities. But those augmenting paths are not necessarily the final drone routes, because later augmentations can reroute earlier flow.
-
-# So after the algorithm finishes, decompose_paths looks at the residual graph and asks:
-
-# Which original edges ended up carrying positive flow?
-# Usually that is detected with:
-
-# used_flow = reverse_edge.capacity
-# Then it follows original edges with positive used flow from:
-
-# source -> sink
-# and extracts paths like:
-
-# start -> A -> B -> goal
-# In short:
-
-# Min-Cost Max-Flow result = flow spread across edges
-# decompose_paths = convert that flow into list of source-to-sink paths
-# Those paths become the path bank used later by your scheduler.
