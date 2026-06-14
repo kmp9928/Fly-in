@@ -82,7 +82,7 @@ class FlyIn:
         simulation_result = simulation.simulate_turns()
         print()
         Renderer.render_simulation(graph, simulation_result)
-        simulation.print_secondary_metrics()
+        # simulation.print_secondary_metrics()
 
 
 if __name__ == "__main__":

@@ -272,6 +272,7 @@ class Renderer:
             "cyan": "#00FFFF",
             "darkred": "#8B0000",
             "gold": "#FFD700",
+            "gray": "#808080",
             "green": "#008000",
             "lime": "#32CD32",
             "magenta": "#FF007F",

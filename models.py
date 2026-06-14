@@ -33,6 +33,7 @@ class Color(Enum):
     CYAN = "cyan"
     DARKRED = "darkred"
     GOLD = "gold"
+    GRAY = "gray"
     GREEN = "green"
     LIME = "lime"
     MAGENTA = "magenta"
@@ -91,7 +92,7 @@ class Node(BaseModel):
         Raises:
             ValidationError: If the node name contains dashes/spaces.
         """
-        if "-" in self.name in self.name:
+        if "-" in self.name or " " in self.name:
             raise ValidationError.from_exception_data(
                 title="Network",
                 line_errors=[{
