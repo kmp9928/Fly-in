@@ -25,7 +25,7 @@ class FlyIn:
             category = input(
                 "\nPlease enter a map category:\n"
                 f"-{'-'.join([option + '\n' for option in map_categories])}\n"
-            ).lower()
+            ).lower().strip(" ")
 
             if category not in map_categories:
                 FlyIn.print_wrong_input(f"'{category}' is not a category")
