@@ -257,8 +257,9 @@ class NetworkParser:
         data: Dict[str, Any] = {"hubs": hubs, "connections": connections}
         try:
             with open(file_name, "r") as file:
-                for line_n, line in enumerate(file, start=1):
-                    if line.startswith("#") or not line.strip():
+                for line_n, line_str in enumerate(file, start=1):
+                    line = line_str.strip()
+                    if line.startswith("#") or not line:
                         continue
                     pfx, value = NetworkParser.get_prefix_value(line, line_n)
                     if (pfx != "nb_drones" and len(data) == 2 and
@@ -338,7 +339,7 @@ class NetworkParser:
         """
         clean_metadata: Dict[str, str] = {}
         if metadata:
-            split_metadata = metadata.strip("[]").split()
+            split_metadata = metadata.strip("]").split()
             for element in split_metadata:
                 try:
                     tag, value = element.split("=")
