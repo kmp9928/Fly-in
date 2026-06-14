@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ValidationError, model_validator
 from pydantic_core import PydanticCustomError
-from typing import Tuple, List, Dict, Any, Self, Set
+from typing import Tuple, List, Dict, Any, Self
 from errors import (
     NetworkFileNotFoundError,
     ZoneConnectionNameError,
@@ -11,12 +11,26 @@ from errors import (
     MetadataFormatError,
     MetadataTagError,
     ModelValidationError,
+    MissingMandatoryFieldError
 )
 from models import ZoneType, Color, DronesN, Node, Connection
 from graph import Graph
 
 
 class Network(BaseModel):
+    """Represents a digital map of the entire drone setup.
+
+    Validates spatial layout schemas, entity naming criteria, structural
+    uniqueness limits and cross-references connectivity chains across
+    interconnecting drone infrastructure components.
+
+    Attributes:
+        nb_drones (DronesN): Total number of drones in the network.
+        start_hub (Node): The designated source/entry point node.
+        end_hub (Node): The designated terminal destination/drop off node.
+        hubs (List[Node]): Collection of intermediate routing staging nodes.
+        connections (List[Connection]): Edge or connection between two nodes.
+    """
     nb_drones: DronesN
     start_hub: Node
     end_hub: Node
@@ -25,12 +39,25 @@ class Network(BaseModel):
 
     @model_validator(mode='after')
     def change_start_end_max_drones(self) -> Self:
+        """Synchronizes drone threshold capacities across entry and exit hubs.
+
+        Returns:
+            Self: The updated structural state model reference instance.
+        """
         self.start_hub.max_drones = self.nb_drones.number
         self.end_hub.max_drones = self.nb_drones.number
         return self
 
     @model_validator(mode='after')
     def compare_start_vs_end(self) -> Self:
+        """Verifies terminal hub spatial separation boundaries.
+
+        Returns:
+            Self: The verified baseline structural data instance.
+
+        Raises:
+            ValidationError: If start and end hubs share identical coordinates.
+        """
         if (
             self.start_hub.x == self.end_hub.x and
             self.start_hub.y == self.end_hub.y
@@ -42,13 +69,25 @@ class Network(BaseModel):
                         "start_end_error",
                         "Start and end zone have the same coordinates"
                     ),
-                    "loc": ("end_hub", "x and y")
+                    "loc": ("end_hub", "x and y"),
+                    "input": {
+                        "start_x": self.start_hub.x, "end_x": self.end_hub.x #new check if issues...
+                    }
                 }]
             )
         return self
 
     @model_validator(mode='after')
     def check_zones_coordinates(self) -> Self:
+        """Validates that intermediate hubs are within grid boundaries.
+
+        Returns:
+            Self: The validated model instance.
+
+        Raises:
+            ValidationError: If an intermediate hub's x coordinate falls
+                outside the horizontal interval between the start and end hubs.
+        """
         for n, zone in enumerate(self.hubs, start=0):
             if zone.x < self.start_hub.x or zone.x > self.end_hub.x:
                 raise ValidationError.from_exception_data(
@@ -58,13 +97,23 @@ class Network(BaseModel):
                             "invalid_coord_error",
                             f"'{zone.name}' has invalid integer coordinates"
                         ),
-                        "loc": ("hubs", n)
+                        "loc": ("hubs", n),
+                        "input": {"zone": zone.name, "x": zone.x} #new check if issues...
                     }]
                 )
         return self
 
     @model_validator(mode='after')
     def check_zone_uniqueness(self) -> Self:
+        """Ensures all hubs/nodes across the network are completely unique.
+
+        Returns:
+            Self: The validated structural context model configuration.
+
+        Raises:
+            ValidationError: If an identifier collision is found across any
+                combination of start, intermediate, or end hubs.
+        """
         zones: List[str] = [hub.name for hub in self.hubs]
         zones = [self.start_hub.name] + zones + [self.end_hub.name]
         for n, zone in enumerate(zones, start=0):
@@ -76,13 +125,47 @@ class Network(BaseModel):
                             "duplicate_zone_error",
                             f"Zone '{zone}' is not unique"
                         ),
-                        "loc": ("hubs", n)
+                        "loc": ("hubs", n),
+                        "input": zone #new check if issues...
                     }]
                 )
         return self
 
     @model_validator(mode='after')
+    def check_connections_existence(self) -> Self:
+        """Validates that the network has not just hubs.
+
+        Returns:
+            Self: The validated baseline model configuration instance.
+
+        Raises:
+            ValidationError: If there are no connections.
+        """
+        if len(self.connections) < 1:
+            raise ValidationError.from_exception_data(
+                title="Network",
+                line_errors=[{
+                    "type": PydanticCustomError(
+                        "no_connections_error",
+                        "Missing connections in network file"
+                    ),
+                    "loc": ("connections",),
+                    "input": self.connections
+                }]
+            )
+        return self
+
+    @model_validator(mode='after')
     def check_connections(self) -> Self:
+        """Validates that all connections point to real, existing hubs.
+
+        Returns:
+            Self: The validated baseline model configuration instance.
+
+        Raises:
+            ValidationError: If a connection string links to an unrecognized
+                zone name.
+        """
         zones: List[str] = [hub.name for hub in self.hubs]
         zones.extend([self.start_hub.name, self.end_hub.name])
         for n, connection in enumerate(self.connections, start=0):
@@ -96,16 +179,27 @@ class Network(BaseModel):
                             "undefined_zone_error",
                             f"Connection {name1}-{name2} has undefined zone"
                         ),
-                        "loc": ("connections", n)
+                        "loc": ("connections", n),
+                        "input": f"{name1}-{name2}" #new check if issues...
                     }]
                 )
         return self
 
     @model_validator(mode='after')
-    def check_connection_uniqueness(self) -> Self: #changed to somethign cleaner - test!!!!!!
+    def check_connection_uniqueness(self) -> Self:
+        """Prevents duplicate connections, ignoring path direction.
+
+        Returns:
+            Self: The checked system model representation state.
+
+        Raises:
+            ValidationError: If an undirected connection link structure
+                duplicate is encountered in the dataset setup list.
+        """
         unique_connections: List[Tuple[str, str]] = []
         for n, connection in enumerate(self.connections):
-            normalized_pair = sorted((connection.from_hub, connection.to_hub))
+            name1, name2 = sorted((connection.from_hub, connection.to_hub))
+            normalized_pair: Tuple[str, str] = (name1, name2)
             if normalized_pair in unique_connections:
                 raise ValidationError.from_exception_data(
                     title="Network",
@@ -114,13 +208,19 @@ class Network(BaseModel):
                             "duplicate_conn_error",
                             f"Connection {normalized_pair} is duplicated"
                         ),
-                        "loc": ("connections", n)
+                        "loc": ("connections", n),
+                        "input": normalized_pair  #new check if issues...
                     }]
                 )
             unique_connections.append(normalized_pair)
         return self
 
     def to_graph(self) -> Graph:
+        """Transforms data parameters into a graph layout object.
+
+        Returns:
+            Graph: An instance of the Graph visualization network matrix.
+        """
         return Graph(
             start=self.start_hub,
             end=self.end_hub,
@@ -131,8 +231,27 @@ class Network(BaseModel):
 
 
 class NetworkParser:
+    """Parsing class that turns configuration files into Network models.
+
+    Processes raw plain text lines, sanitizes structural components,
+    handles domain-specific syntax exceptions and catches metadata tags.
+    """
     @staticmethod
     def load(file_name: str) -> Network:
+        """Parses a target text configuration file into a Network object.
+
+        Args:
+            file_name: The file of the network of drones.
+
+        Returns:
+            Network: A parsed, validated Pydantic network schema instance.
+
+        Raises:
+            NetworkFileNotFoundError: If the designated file is missing.
+            ModelValidationError: If any formatting validation criteria fails.
+            FirstLineError: If the first line doesn't define the drone number.
+            StarEndZoneError: If more than one start or end are found.
+        """
         hubs: List[Dict[str, str | int | ZoneType | Color]] = []
         connections: List[Dict[str, str | int]] = []
         data: Dict[str, Any] = {"hubs": hubs, "connections": connections}
@@ -152,11 +271,11 @@ class NetworkParser:
                     elif pfx in ["start_hub", "end_hub"]:
                         data[pfx] = NetworkParser.parse_zone((value, line_n))
                     elif pfx == "hub":
-                        data.get("hubs").append(
+                        data["hubs"].append(
                             NetworkParser.parse_zone((value, line_n))
                         )
                     elif pfx == "connection":
-                        data.get("connections").append(
+                        data["connections"].append(
                             NetworkParser.parse_connection((value, line_n))
                         )
             return Network(
@@ -172,9 +291,24 @@ class NetworkParser:
             raise ModelValidationError(
                 NetworkParser.get_validation_errors(e, data)
             )
+        except KeyError as e:
+            raise MissingMandatoryFieldError(str(e))
 
     @staticmethod
     def get_prefix_value(line: str, line_n: int) -> Tuple[str, str]:
+        """Splits structural row strings into key-value pairs.
+
+        Args:
+            line: The raw unparsed text row string.
+            line_n: The current context execution line number.
+
+        Returns:
+            Tuple[str, str]: A split pair matching (prefix_key, string_value).
+
+        Raises:
+            ZoneConnectionFormatError: If separator ': ' is missing/duplicated.
+            PrefixError: If an unknown prefix is found.
+        """
         pfx_value = line.split(": ")
         if len(pfx_value) != 2:
             raise ZoneConnectionFormatError(line, line_n)
@@ -186,9 +320,23 @@ class NetworkParser:
 
     @staticmethod
     def parse_metadata(
-        is_hub: bool, metadata: str, line_n: str
-    ) -> Dict[str, int | ZoneType | Color]:
-        clean_metadata: Dict[str, ZoneType | Color | int] = {}
+        is_hub: bool, metadata: str, line_n: int
+    ) -> Dict[str, str]:
+        """Parses optional attribute strings into type-mapped dictionaries.
+
+        Args:
+            is_hub: True if parsing a hub/node, False for paths/connections.
+            metadata: Raw internal attributes.
+            line_n: File tracker position index string context reference.
+
+        Returns:
+            Dict[str, str]: Mapped metadata tags.
+
+        Raises:
+            MetadataFormatError: If an assignment block is incorrect.
+            MetadataTagError: If an invalid tag is encountered.
+        """
+        clean_metadata: Dict[str, str] = {}
         if metadata:
             split_metadata = metadata.strip("[]").split()
             for element in split_metadata:
@@ -205,9 +353,19 @@ class NetworkParser:
         return clean_metadata
 
     @staticmethod
-    def parse_zone(
-        zone_info: Tuple[str, int]
-    ) -> Dict[str, str | int | ZoneType | Color]:
+    def parse_zone(zone_info: Tuple[str, int]) -> Dict[str, str | int]:
+        """Extracts identifiers and parameters for a network hub.
+
+        Args:
+            zone_info: A tuple container combining (node_string, line_number).
+
+        Returns:
+            Dict[str, str]: Extracted zone property arguments map.
+
+        Raises:
+            ZoneConnectionNameError: If components violate syntax patterns.
+            ZoneConnectionFormatError: If definitions are missing.
+        """
         info, line_n = zone_info
         all_info = info.split("[")
         name_x_y = all_info[0].split()
@@ -218,7 +376,7 @@ class NetworkParser:
             raise ZoneConnectionFormatError(info, line_n)
 
         name, x, y = name_x_y
-        zone_args: Dict[str, str | int | ZoneType | Color] = {
+        zone_args: Dict[str, str | int] = {
             "name": name,
             "x": x,
             "y": y,
@@ -232,6 +390,18 @@ class NetworkParser:
 
     @staticmethod
     def parse_connection(connection: Tuple[str, int]) -> Dict[str, str | int]:
+        """Processes link data fields connecting different graph nodes.
+
+        Args:
+            connection: Tuple pair packing (connection_string, line_number).
+
+        Returns:
+            Dict[str, str]: Connection mapping schema values.
+
+        Raises:
+            ZoneConnectionNameError: If components violate syntax patterns.
+            ZoneConnectionFormatError: If definitions are missing.
+        """
         info, line_n = connection
         all_info = info.split("[")
         from_to = all_info[0].strip().split("-")
@@ -255,23 +425,45 @@ class NetworkParser:
     def get_validation_errors(
         e: ValidationError, data: Dict[str, Any]
     ) -> Dict[int, str]:
+        """Maps Pydantic validation errors back to their file line numbers.
+
+        Args:
+            e: The validation exception object triggered by the Network model.
+            data: The internal temporary layout from the source code data.
+
+        Returns:
+            Dict[int, str]: A line-number-sorted map of user-friendly
+                validation error messages.
+        """
         validation_errors: Dict[int, str] = {}
         for error in e.errors():
             location = error["loc"]
             if location:
-                if location[0] in ["nb_drones", "start_hub", "end_hub"]:
-                    line_n = data[location[0]].get("line_n")
+                key = location[0]
+                if (
+                    isinstance(key, str) and
+                    key in ["nb_drones", "start_hub", "end_hub"]
+                ):
+                    line_n = data[key].get("line_n")
                     validation_errors[line_n] = (
                         f"{error['msg']} for '{location[1]}'."
                     )
-                elif location[0] in ["hubs", "connections"]:
-                    line_n = data[location[0]][location[1]].get("line_n")
-                    if len(location) <= 2:
-                        validation_errors[line_n] = (f"{error['msg']}.")
+                elif key in ["hubs", "connections"]:
+                    if len(location) > 1:
+                        index = location[1]
+                        if isinstance(key, str) and isinstance(index, int):
+                            line_n = data[key][index].get("line_n")
+                            if len(location) <= 2:
+                                validation_errors[line_n] = (
+                                    f"{error['msg']}."
+                                )
+                            else:
+                                validation_errors[line_n] = (
+                                    f"{error['msg']} for '{location[2]}'."
+                                )
                     else:
-                        validation_errors[line_n] = (
-                            f"{error['msg']} for '{location[2]}'."
-                        )
+                        validation_errors[0] = (f"{error['msg']}.")
+
         return ({k: v for k, v in sorted(
             validation_errors.items(), key=lambda item: item[0]
             )

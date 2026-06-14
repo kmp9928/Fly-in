@@ -73,21 +73,21 @@ class FlyIn:
         map_file: str = FlyIn.get_file()
         print()
 
-        try:
-            graph = NetworkParser.load(map_file).to_graph()
-            path_finding_algorithm = MinCostMaxFlowAlgorithm()
-            path, drone_assignment, turns = (
-                RoutePlanner(path_finding_algorithm, graph).schedule_drones()
-            )
-            simulation = SimulationEngine(path, drone_assignment, turns, graph)
-            simulation_result = simulation.simulate_turns()
-            print()
-            Renderer.render_simulation(graph, simulation_result)
-            simulation.print_secondary_metrics()
-        except (NetworkFileError, FlowGraphError) as e: #ValueError too???
-            print(f"Error: {e}")
+        graph = NetworkParser.load(map_file).to_graph()
+        path_finding_algorithm = MinCostMaxFlowAlgorithm()
+        path, drone_assignment, turns = (
+            RoutePlanner(path_finding_algorithm, graph).schedule_drones()
+        )
+        simulation = SimulationEngine(path, drone_assignment, turns, graph)
+        simulation_result = simulation.simulate_turns()
+        print()
+        Renderer.render_simulation(graph, simulation_result)
+        simulation.print_secondary_metrics()
 
 
 if __name__ == "__main__":
     print("\n\n= = = = = = Welcome to Fly-In = = = = = =\n\n")
-    fly_in = FlyIn.run()
+    try:
+        fly_in = FlyIn.run()
+    except (NetworkFileError, FlowGraphError) as e: #ValueError too???
+        print(f"Error: {e}")

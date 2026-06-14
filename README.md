@@ -84,12 +84,12 @@ To respect **zone capacity** (`max_drones`) as a vertex capacity, each node is *
 
 | Zone type   | Inner edge cost |
 |-------------|-----------------|
-| `priority`  | 0               |
+| `priority`  | -2              |
 | `normal`    | 1               |
 | `restricted`| 10              |
 | `blocked`   | not added       |
 
-Physical connections between zones become edges between `_out` of one node and `_in` of another, with capacity equal to `max_link_capacity`.
+Physical connections between zones become edges between `_out` of one node and `_in` of another, with capacity equal to `max_link_capacity` and cost `1`. Connections between two priority zones use an external edge cost of **2** (instead of 1) to prevent negative cycles while preserving the cost advantage of priority paths.
 
 **Bellman-Ford** finds the shortest (cheapest) augmenting path in the residual graph, `augment()` pushes flow along it, and the loop repeats until no augmenting path exists. `decompose_paths()` then reads the final positive-flow edges and reconstructs source-to-sink paths. `collapse_paths()` strips the `_in`/`_out` suffixes to recover original node names.
 
@@ -111,9 +111,7 @@ The subset that minimises `max(completion_time across all paths)` is chosen. Pat
 
 ### 5. Simulation — `SimulationEngine` (`simulation_engine.py`)
 
-`insert_edges()` expands each path `[A, B, C]` into `[A, A-B, B, B-C, C]` so that connection edges are explicit states a drone can occupy.
-
-Each turn, every drone that has not yet reached the end is asked for its `get_next_move()`. The method checks whether the next node has remaining occupancy in `current_occupancy` (a live capacity ledger), handles the two-turn restricted zone transit (drone stays on the edge name for one turn, then enters the zone), and returns `None` (drone waits) if the next node is full. Drones moving out of a node free up capacity before drones moving in consume it, matching the spec's same-turn freeing rule.
+Each turn, every drone that has not yet reached the end is asked for its next mode (`get_next_move()`). The method checks whether the next node has remaining occupancy (with `current_occupancy` a live capacity ledger), handles the two-turn restricted zone transit (drone stays on the edge name for one turn, then enters the zone), and the drone waits if the next node is full (with a return of `None`). Drones moving out of a node free up capacity before drones moving in consume it, matching the spec's same-turn freeing rule.
 
 After each turn, the structured output (`D<id>-<zone>`) is printed and the Plotly frame is recorded.
 
@@ -149,7 +147,6 @@ After the terminal output, an interactive HTML figure opens in the browser showi
 - **Coloured circles** for each hub, using the `color` metadata from the map file.
 - **Black triangles** for drones, with IDs as labels.
 - A **Play / Pause** button that animates drone movement turn by turn (2.5 s per frame, 0.75 s transition).
-- Node and drone sizes scale dynamically with the number of nodes so both small and large maps render clearly.
 - When multiple drones share a node, they are spread in a small orbit around the node centre to remain individually visible.
 
 The animation makes it easy to visually verify that capacity rules are respected, identify bottlenecks, and understand the routing strategy chosen by the algorithm.
@@ -179,12 +176,12 @@ The animation makes it easy to visually verify that capacity rules are respected
 
 ### References
 
+- [Graph Theory and Graphs in Python](https://python-course.eu/applications-python/graphs-python.php) — explanation of graph theory and how they can be represented in Python
 - [Bellman-Ford algorithm](https://en.wikipedia.org/wiki/Bellman%E2%80%93Ford_algorithm) — shortest path in graphs with negative weights
 - [Min-Cost Max-Flow](https://en.wikipedia.org/wiki/Minimum-cost_flow_problem) — flow optimization with costs
-- [Flow decomposition](https://en.wikipedia.org/wiki/Flow_decomposition) — recovering paths from a flow solution
-- [Makespan minimization on parallel machines](https://en.wikipedia.org/wiki/Makespan) — the theoretical model behind drone-to-path assignment
-- [Pydantic v2 documentation](https://docs.pydantic.dev/latest/) — data validation and model validators
-- [Plotly Python documentation](https://plotly.com/python/) — interactive graph visualisation and animation
+- [Flow decomposition](https://www.youtube.com/watch?v=JlzjTR4Y1FQ&t=10s) — recovering paths from a flow solution
+- [Makespan minimization on parallel machines or greedy load-balancing algorithm](https://pdfs.semanticscholar.org/8eae/bd0a747a2e35964c3b1a04dafdedf63d949d.pdf) — the theoretical model behind drone-to-path assignment
+- [Plotly Network Graphs in Python documentation](https://plotly.com/python/network-graphs/) — interactive graph visualization and animation
 
 ### AI Usage
 
